@@ -1,0 +1,176 @@
+{%- liquid
+  assign section1_overtitle = product.metafields.landing.section1_overtitle.value | default: product.metafields.landing.section1_overtitle | default: ""
+  assign section1_title = product.metafields.landing.section1_title.value | default: product.metafields.landing.section1_title | default: "Qualità Superiore"
+  assign section1_text = product.metafields.landing.section1_text.value | default: product.metafields.landing.section1_text | default: ""
+  assign section1_bullets = product.metafields.landing.section1_bullets.value | default: product.metafields.landing.section1_bullets | default: ""
+  assign section1_image = product.metafields.landing.section1_image.value | default: product.metafields.landing.section1_image | default: ""
+-%}
+
+<div class="landing-section-1">
+  <div class="section-container">
+    <div class="section-content">
+      <div class="section-text">
+        {% if section1_overtitle != blank %}
+          <p class="section-overtitle">{{ section1_overtitle }}</p>
+        {% endif %}
+        <h2 class="section-title">{{ section1_title }}</h2>
+        {% if section1_text != blank %}
+          <div class="section-text-content">{{ section1_text | replace: '&lt;', '<' | replace: '&gt;', '>' | replace: '&amp;', '&' | replace: '&quot;', '"' | newline_to_br }}</div>
+        {% endif %}
+
+        {% if section1_bullets != blank %}
+          <ul class="section-bullets">
+            {% assign bullets = section1_bullets | split: '|' %}
+            {% for bullet in bullets %}
+              {% if bullet != blank %}
+                <li>
+                  <span class="bullet-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </span>
+                  <span class="bullet-text">{{ bullet }}</span>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+
+      <div class="section-image">
+        {% if section1_image != blank %}
+          <img src="{{ section1_image }}" alt="{{ section1_title }}">
+        {% else %}
+          <img src="{{ product.featured_image | img_url: '800x' }}" alt="{{ product.title }}">
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .landing-section-1 {
+    padding: 80px 40px;
+    background: #f9f9f9;
+  }
+
+  .landing-section-1 .section-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .landing-section-1 .section-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 70px;
+    align-items: center;
+  }
+
+  .landing-section-1 .section-image img {
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  }
+
+  .landing-section-1 .section-overtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 0 0 12px 0;
+  }
+
+  .landing-section-1 .section-title {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin: 0 0 20px 0;
+    color: #000;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+  }
+
+  .landing-section-1 .section-text p,
+  .landing-section-1 .section-text-content {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #666;
+    margin: 0 0 24px 0;
+  }
+
+  .landing-section-1 .section-text-content p {
+    margin: 0 0 12px 0;
+  }
+
+  .landing-section-1 .section-text-content strong {
+    font-weight: 600;
+    color: #333;
+  }
+
+  .landing-section-1 .section-text-content em {
+    font-style: italic;
+  }
+
+  .landing-section-1 .section-text-content br {
+    display: block;
+    margin: 8px 0;
+  }
+
+  .landing-section-1 .section-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .landing-section-1 .section-bullets li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .landing-section-1 .bullet-icon {
+    width: 22px;
+    height: 22px;
+    background: #666;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .landing-section-1 .bullet-icon svg {
+    width: 12px;
+    height: 12px;
+    stroke: #fff;
+  }
+
+  .landing-section-1 .bullet-text {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 768px) {
+    .landing-section-1 {
+      padding: 60px 20px;
+    }
+    .landing-section-1 .section-content {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    .landing-section-1 .section-title {
+      font-size: 1.8rem;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Landing Section 1",
+  "settings": []
+}
+{% endschema %}

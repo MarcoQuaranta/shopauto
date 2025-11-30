@@ -1,0 +1,158 @@
+<div class="landing-section-2">
+  <div class="section-container">
+    <div class="section-content reverse">
+      {% if product.metafields.landing.section2_text %}
+        <div class="section-text">
+          {% if product.metafields.landing.section2_title %}
+            <h2 class="section-title">{{ product.metafields.landing.section2_title }}</h2>
+          {% endif %}
+          <div class="text-content">
+            {{ product.metafields.landing.section2_text }}
+          </div>
+
+          {% if product.metafields.landing.section2_bullets %}
+            <ul class="section-bullets">
+              {% assign bullets = product.metafields.landing.section2_bullets | split: '|' %}
+              {% for bullet in bullets %}
+                {% if bullet != blank %}
+                  <li>
+                    <span class="bullet-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M5 13l4 4L19 7"></path>
+                      </svg>
+                    </span>
+                    <span class="bullet-text">{{ bullet }}</span>
+                  </li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if product.metafields.landing.section2_image %}
+        <div class="section-image">
+          <img src="{{ product.metafields.landing.section2_image }}" alt="{{ product.metafields.landing.section2_title }}">
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  .landing-section-2 {
+    padding: 60px 40px;
+    background: #ffffff;
+  }
+
+  .section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-content.reverse {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+
+  .section-title {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+
+  .text-content {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #333;
+  }
+
+  .text-content p {
+    margin: 0 0 12px 0;
+  }
+
+  .text-content strong {
+    font-weight: 600;
+    color: #111;
+  }
+
+  .text-content em {
+    font-style: italic;
+  }
+
+  .section-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .section-bullets li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bullet-icon {
+    width: 24px;
+    height: 24px;
+    background: #666;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .bullet-icon svg {
+    width: 14px;
+    height: 14px;
+    stroke: #fff;
+  }
+
+  .bullet-text {
+    font-size: 15px;
+    color: #333;
+    line-height: 1.4;
+  }
+
+  .section-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  @media (max-width: 768px) {
+    .section-content.reverse {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Landing Section 2",
+  "settings": [
+    {
+      "type": "text",
+      "id": "section2_title",
+      "label": "Section Title"
+    },
+    {
+      "type": "textarea",
+      "id": "section2_text",
+      "label": "Section Text"
+    },
+    {
+      "type": "image_picker",
+      "id": "section2_image",
+      "label": "Section Image"
+    }
+  ]
+}
+{% endschema %}

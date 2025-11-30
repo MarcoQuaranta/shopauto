@@ -1,0 +1,37 @@
+{
+  "name": "Landing Page",
+  "sections": {
+    "hero": {
+      "type": "landing-hero",
+      "settings": {}
+    },
+    "section_1": {
+      "type": "landing-section-1",
+      "settings": {}
+    },
+    "text_block": {
+      "type": "landing-text-block",
+      "settings": {}
+    },
+    "reviews": {
+      "type": "landing-reviews",
+      "settings": {}
+    },
+    "faq": {
+      "type": "landing-faq",
+      "settings": {}
+    },
+    "about": {
+      "type": "landing-about",
+      "settings": {}
+    }
+  },
+  "order": [
+    "hero",
+    "section_1",
+    "text_block",
+    "reviews",
+    "faq",
+    "about"
+  ]
+}

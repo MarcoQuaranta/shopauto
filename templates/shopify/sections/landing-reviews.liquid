@@ -1,0 +1,155 @@
+{%- liquid
+  assign reviews_title = product.metafields.landing.reviews_title.value | default: product.metafields.landing.reviews_title | default: "Cosa dicono i nostri clienti"
+
+  assign review1_stars = product.metafields.landing.review1_stars.value | default: product.metafields.landing.review1_stars | default: "5" | plus: 0
+  assign review1_author = product.metafields.landing.review1_author.value | default: product.metafields.landing.review1_author | default: "Cliente verificato"
+  assign review1_text_raw = product.metafields.landing.review1_text.value | default: product.metafields.landing.review1_text | default: ""
+  assign review1_text = review1_text_raw | remove: "★★★★★ – " | remove: "★★★★☆ – " | remove: "★★★☆☆ – " | remove: "★★☆☆☆ – " | remove: "★☆☆☆☆ – " | remove: '"' | strip
+
+  assign review2_stars = product.metafields.landing.review2_stars.value | default: product.metafields.landing.review2_stars | default: "5" | plus: 0
+  assign review2_author = product.metafields.landing.review2_author.value | default: product.metafields.landing.review2_author | default: "Cliente verificato"
+  assign review2_text_raw = product.metafields.landing.review2_text.value | default: product.metafields.landing.review2_text | default: ""
+  assign review2_text = review2_text_raw | remove: "★★★★★ – " | remove: "★★★★☆ – " | remove: "★★★☆☆ – " | remove: "★★☆☆☆ – " | remove: "★☆☆☆☆ – " | remove: '"' | strip
+
+  assign review3_stars = product.metafields.landing.review3_stars.value | default: product.metafields.landing.review3_stars | default: "5" | plus: 0
+  assign review3_author = product.metafields.landing.review3_author.value | default: product.metafields.landing.review3_author | default: "Cliente verificato"
+  assign review3_text_raw = product.metafields.landing.review3_text.value | default: product.metafields.landing.review3_text | default: ""
+  assign review3_text = review3_text_raw | remove: "★★★★★ – " | remove: "★★★★☆ – " | remove: "★★★☆☆ – " | remove: "★★☆☆☆ – " | remove: "★☆☆☆☆ – " | remove: '"' | strip
+-%}
+
+<div class="landing-reviews">
+  <div class="reviews-container">
+    <h2 class="reviews-title">{{ reviews_title }}</h2>
+
+    <div class="reviews-grid">
+      {%- comment -%} REVIEW 1 {%- endcomment -%}
+      {% if review1_text != blank %}
+      <div class="review-item">
+        <div class="review-stars">
+          {%- for i in (1..5) -%}
+            {%- if i <= review1_stars -%}★{%- else -%}☆{%- endif -%}
+          {%- endfor -%}
+        </div>
+        <p class="review-text">"{{ review1_text }}"</p>
+        <div class="review-author">
+          <span class="author-name">{{ review1_author }}</span>
+          <span class="verified">Acquisto verificato</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {%- comment -%} REVIEW 2 {%- endcomment -%}
+      {% if review2_text != blank %}
+      <div class="review-item">
+        <div class="review-stars">
+          {%- for i in (1..5) -%}
+            {%- if i <= review2_stars -%}★{%- else -%}☆{%- endif -%}
+          {%- endfor -%}
+        </div>
+        <p class="review-text">"{{ review2_text }}"</p>
+        <div class="review-author">
+          <span class="author-name">{{ review2_author }}</span>
+          <span class="verified">Acquisto verificato</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {%- comment -%} REVIEW 3 {%- endcomment -%}
+      {% if review3_text != blank %}
+      <div class="review-item">
+        <div class="review-stars">
+          {%- for i in (1..5) -%}
+            {%- if i <= review3_stars -%}★{%- else -%}☆{%- endif -%}
+          {%- endfor -%}
+        </div>
+        <p class="review-text">"{{ review3_text }}"</p>
+        <div class="review-author">
+          <span class="author-name">{{ review3_author }}</span>
+          <span class="verified">Acquisto verificato</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  .landing-reviews {
+    padding: 80px 40px;
+    background: #fff;
+  }
+
+  .landing-reviews .reviews-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .landing-reviews .reviews-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .landing-reviews .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+  }
+
+  .landing-reviews .review-item {
+    padding: 30px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+  }
+
+  .landing-reviews .review-stars {
+    color: #f5a623;
+    font-size: 16px;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .landing-reviews .review-text {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #444;
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+
+  .landing-reviews .review-author {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .landing-reviews .author-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .landing-reviews .verified {
+    font-size: 12px;
+    color: #888;
+  }
+
+  @media (max-width: 768px) {
+    .landing-reviews {
+      padding: 60px 20px;
+    }
+    .landing-reviews .reviews-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Landing Reviews",
+  "settings": []
+}
+{% endschema %}

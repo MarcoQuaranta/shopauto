@@ -1,0 +1,124 @@
+<div class="landing-text-block">
+  <div class="text-block-container">
+    <div class="text-block-content">
+      {% if product.metafields.landing.text_block_subtitle %}
+        <p class="text-block-subtitle">{{ product.metafields.landing.text_block_subtitle }}</p>
+      {% else %}
+        <p class="text-block-subtitle">La nostra promessa</p>
+      {% endif %}
+
+      {% if product.metafields.landing.text_block_description %}
+        <div class="text-block-description">{{ product.metafields.landing.text_block_description }}</div>
+      {% else %}
+        <h2 class="text-block-description">Un prodotto pensato per chi non si accontenta. Ogni dettaglio è stato curato con la massima attenzione per offrirti un'esperienza unica e indimenticabile.</h2>
+      {% endif %}
+    </div>
+
+    <div class="text-block-image">
+      {% if product.metafields.landing.text_block_image %}
+        <img src="{{ product.metafields.landing.text_block_image }}" alt="{{ product.title }}">
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  .landing-text-block {
+    background: #2d2d2d;
+    padding: 80px 40px;
+  }
+
+  .text-block-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .text-block-content {
+    margin-bottom: 60px;
+  }
+
+  .text-block-subtitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b6b6b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+
+  .text-block-description {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #7a7a7a;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .text-block-description p {
+    margin: 0 0 16px 0;
+  }
+
+  .text-block-description strong {
+    font-weight: 800;
+    color: #999;
+  }
+
+  .text-block-description em {
+    font-style: italic;
+  }
+
+  .text-block-image {
+    display: flex;
+    justify-content: center;
+  }
+
+  .text-block-image img {
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 768px) {
+    .landing-text-block {
+      padding: 60px 24px;
+    }
+
+    .text-block-subtitle {
+      font-size: 12px;
+    }
+
+    .text-block-description {
+      font-size: 1.6rem;
+    }
+
+    .text-block-image img {
+      width: 220px;
+      height: 220px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Landing Text Block",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text_block_subtitle",
+      "label": "Sottotitolo (piccolo)"
+    },
+    {
+      "type": "textarea",
+      "id": "text_block_description",
+      "label": "Descrizione (grande)"
+    },
+    {
+      "type": "image_picker",
+      "id": "text_block_image",
+      "label": "Immagine circolare"
+    }
+  ]
+}
+{% endschema %}

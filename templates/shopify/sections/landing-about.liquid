@@ -1,0 +1,101 @@
+<section class="lp-about-section">
+  <div class="lp-about-overlay"></div>
+  <div class="lp-about-content">
+    <p class="lp-about-overtitle">CHI SIAMO...</p>
+    <h2 class="lp-about-title">LA NOSTRA STORIA</h2>
+    <p class="lp-about-text">Benvenuti nel nostro sito, dove l'autenticità del marchio è garantita. Siamo rivenditori autorizzati, in attività dal 2005. Da sempre in questo settore AURUM MILANO nasce da una forte passione per gli orologi, che ci porta a riconoscere la qualità e il comfort di un accessorio che fa sempre la differenza in ogni caso.</p>
+    <p class="lp-about-text">Scopri la nostra ampia gamma di orologi che incarnano l'eleganza.</p>
+  </div>
+</section>
+
+<style>
+  .lp-about-section {
+    position: relative;
+    width: 100%;
+    height: 70vh;
+    min-height: 500px;
+    background-image: url('https://aurummilano.it/cdn/shop/files/a-close-up-of-luxury-watch.jpg?v=1758648142');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .lp-about-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .lp-about-content {
+    position: relative;
+    z-index: 2;
+    text-align: left;
+    padding: 60px;
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  .lp-about-overtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin: 0 0 12px 0;
+  }
+
+  .lp-about-title {
+    font-size: 42px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 30px 0;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .lp-about-text {
+    font-size: 15px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.8;
+    margin: 0 0 16px 0;
+    max-width: 600px;
+  }
+
+  .lp-about-text:last-child {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 768px) {
+    .lp-about-section {
+      height: auto;
+      min-height: 500px;
+    }
+    .lp-about-content {
+      padding: 40px 20px;
+    }
+    .lp-about-title {
+      font-size: 28px;
+    }
+    .lp-about-overtitle {
+      font-size: 11px;
+    }
+    .lp-about-text {
+      font-size: 14px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Landing Chi Siamo",
+  "settings": []
+}
+{% endschema %}

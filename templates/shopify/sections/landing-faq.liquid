@@ -1,0 +1,174 @@
+<section class="lp-faq-section">
+  <div class="lp-faq-wrapper">
+    <h2 class="lp-faq-heading">Domande Frequenti</h2>
+
+    <div class="lp-faq-list">
+      <div class="lp-faq-item">
+        <button class="lp-faq-btn" onclick="lpToggleFaq(this)">
+          <span class="lp-faq-q">Quali sono i tempi di spedizione?</span>
+          <span class="lp-faq-icon">+</span>
+        </button>
+        <div class="lp-faq-a">
+          <p>Le spedizioni vengono elaborate entro 24-48 ore lavorative. La consegna avviene in 3-5 giorni lavorativi per l'Italia. Per le isole e zone remote potrebbero essere necessari 1-2 giorni aggiuntivi.</p>
+        </div>
+      </div>
+
+      <div class="lp-faq-item">
+        <button class="lp-faq-btn" onclick="lpToggleFaq(this)">
+          <span class="lp-faq-q">Posso effettuare un reso?</span>
+          <span class="lp-faq-icon">+</span>
+        </button>
+        <div class="lp-faq-a">
+          <p>Certamente! Hai 30 giorni di tempo dalla ricezione del prodotto per effettuare un reso. Il prodotto deve essere nelle condizioni originali con tutti gli imballaggi. Contattaci via email per avviare la procedura.</p>
+        </div>
+      </div>
+
+      <div class="lp-faq-item">
+        <button class="lp-faq-btn" onclick="lpToggleFaq(this)">
+          <span class="lp-faq-q">Quali metodi di pagamento accettate?</span>
+          <span class="lp-faq-icon">+</span>
+        </button>
+        <div class="lp-faq-a">
+          <p>Accettiamo tutte le principali carte di credito e debito (Visa, Mastercard, American Express), PayPal, Apple Pay, Google Pay e bonifico bancario. Tutti i pagamenti sono sicuri e crittografati.</p>
+        </div>
+      </div>
+
+      <div class="lp-faq-item">
+        <button class="lp-faq-btn" onclick="lpToggleFaq(this)">
+          <span class="lp-faq-q">Il prodotto ha una garanzia?</span>
+          <span class="lp-faq-icon">+</span>
+        </button>
+        <div class="lp-faq-a">
+          <p>Tutti i nostri prodotti sono coperti da una garanzia di 24 mesi dalla data di acquisto. La garanzia copre difetti di fabbricazione e malfunzionamenti. Per attivare la garanzia conserva la ricevuta d'acquisto.</p>
+        </div>
+      </div>
+
+      <div class="lp-faq-item">
+        <button class="lp-faq-btn" onclick="lpToggleFaq(this)">
+          <span class="lp-faq-q">Come posso contattare l'assistenza?</span>
+          <span class="lp-faq-icon">+</span>
+        </button>
+        <div class="lp-faq-a">
+          <p>Il nostro team di assistenza clienti è disponibile dal lunedì al venerdì, dalle 9:00 alle 18:00. Puoi contattarci via email o tramite il modulo di contatto sul sito. Rispondiamo entro 24 ore.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .lp-faq-section {
+    background: #fff;
+    padding: 80px 20px;
+  }
+
+  .lp-faq-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .lp-faq-heading {
+    font-size: 28px;
+    font-weight: 600;
+    color: #000;
+    text-align: left;
+    margin: 0 0 40px 0;
+    letter-spacing: -0.02em;
+  }
+
+  .lp-faq-list {
+    width: 100%;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .lp-faq-item {
+    border-bottom: 1px solid #e0e0e0;
+    width: 100%;
+  }
+
+  .lp-faq-btn {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+  }
+
+  .lp-faq-q {
+    font-size: 15px;
+    font-weight: 500;
+    color: #000;
+    text-align: left;
+    line-height: 1.4;
+  }
+
+  .lp-faq-icon {
+    font-size: 22px;
+    font-weight: 300;
+    color: #000;
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+    margin-left: 20px;
+  }
+
+  .lp-faq-item.open .lp-faq-icon {
+    transform: rotate(45deg);
+  }
+
+  .lp-faq-a {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .lp-faq-item.open .lp-faq-a {
+    max-height: 200px;
+  }
+
+  .lp-faq-a p {
+    margin: 0;
+    padding: 0 0 22px 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #666;
+    text-align: left;
+  }
+
+  @media (max-width: 768px) {
+    .lp-faq-section {
+      padding: 60px 20px;
+    }
+    .lp-faq-heading {
+      font-size: 24px;
+      margin-bottom: 30px;
+    }
+    .lp-faq-q {
+      font-size: 14px;
+    }
+  }
+</style>
+
+<script>
+  function lpToggleFaq(btn) {
+    var item = btn.parentElement;
+    var wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.lp-faq-item').forEach(function(el) {
+      el.classList.remove('open');
+    });
+    if (!wasOpen) {
+      item.classList.add('open');
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Landing FAQ",
+  "settings": []
+}
+{% endschema %}

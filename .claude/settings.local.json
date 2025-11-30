@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "WebFetch(domain:aurummilano.it)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
