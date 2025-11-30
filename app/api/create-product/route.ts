@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
       images,
     } = body;
 
+    console.log('[CREATE] Received request body:', JSON.stringify(body, null, 2));
+    console.log('[CREATE] metafields received:', metafields ? Object.keys(metafields).length : 0, 'keys');
+    console.log('[CREATE] Non-empty metafields:', metafields ? Object.entries(metafields).filter(([k, v]) => v !== '' && v !== null && v !== undefined).map(([k]) => k) : []);
+
     if (!shopId || !title) {
       return NextResponse.json(
         { error: 'Missing required fields: shopId, title' },
@@ -176,10 +180,12 @@ export async function POST(request: NextRequest) {
         );
 
         if (metafieldResult.metafieldsSet.userErrors.length > 0) {
-          console.error('Metafield errors:', metafieldResult.metafieldsSet.userErrors);
+          console.error('[CREATE] Metafield errors:', metafieldResult.metafieldsSet.userErrors);
+        } else {
+          console.log('[CREATE] Metafields saved successfully:', metafieldResult.metafieldsSet.metafields?.length || 0, 'metafields');
         }
       } else {
-        console.log('No metafields to save (all values are empty)');
+        console.log('[CREATE] No metafields to save (all values are empty after filtering)');
       }
     }
 

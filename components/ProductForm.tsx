@@ -183,6 +183,15 @@ export default function ProductForm({ shopId, product, onSuccess }: ProductFormP
       console.log('[FORM] Sending to:', endpoint);
       console.log('[FORM] Payload:', JSON.stringify(payload, null, 2));
 
+      // Count non-empty metafields
+      const nonEmptyMetafields = Object.entries(metafields).filter(([k, v]) => v !== '' && v !== null && v !== undefined);
+      console.log('[FORM] Non-empty metafields count:', nonEmptyMetafields.length);
+      console.log('[FORM] Non-empty metafield keys:', nonEmptyMetafields.map(([k]) => k));
+
+      if (nonEmptyMetafields.length === 0) {
+        console.warn('[FORM] WARNING: All metafields are empty!');
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
