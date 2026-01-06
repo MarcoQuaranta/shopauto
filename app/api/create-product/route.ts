@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const {
       shopId,
       title,
+      description,
       price,
       compareAtPrice,
       sku,
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     // Prepare product input (variants are auto-created by Shopify)
     const productInput: any = {
       title,
+      descriptionHtml: description || '',
       status: 'ACTIVE',
       templateSuffix,
     };
@@ -147,29 +149,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Set metafields if provided (only non-empty values)
+    // NON passiamo il tipo - Shopify lo inferisce dalla definizione esistente
     if (metafields && Object.keys(metafields).length > 0) {
-      // Keys that should use multi_line_text_field (longer texts)
-      const multiLineKeys = [
-        'hero_subtitle', 'section1_text', 'section1_bullets',
-        'section2_text', 'section2_bullets', 'section3_text',
-        'text_block_description', 'review1_text', 'review2_text', 'review3_text'
-      ];
-
       const metafieldInputs = Object.entries(metafields)
         .filter(([key, value]) => {
-          // Skip empty strings and null/undefined
           if (value === '' || value === null || value === undefined) return false;
           return true;
         })
         .map(([key, value]) => ({
           ownerId: productGid,
-          namespace: 'landing',
+          namespace: 'custom',
           key,
           value: typeof value === 'string' ? value : JSON.stringify(value),
-          type: multiLineKeys.includes(key) ? 'multi_line_text_field' : 'single_line_text_field',
+          // NON includere type - Shopify lo inferisce dalla definizione
         }));
 
-      console.log('[CREATE] Metafields to save:', JSON.stringify(metafieldInputs, null, 2));
+      console.log('[CREATE] Metafields to save (without type):', JSON.stringify(metafieldInputs, null, 2));
 
       // Only send metafields if there are any after filtering
       if (metafieldInputs.length > 0) {

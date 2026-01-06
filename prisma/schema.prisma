@@ -8,15 +8,25 @@ datasource db {
 }
 
 model Shop {
-  id           String   @id @default(cuid())
-  name         String?
-  shop         String   @unique
-  accessToken  String
-  scope        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String    @id @default(cuid())
+  name           String?
+  shop           String    @unique
+  accessToken    String
+  scope          String?
 
-  products     Product[]
+  // Client credentials for token refresh
+  clientId       String?
+  clientSecret   String?
+  tokenExpiresAt DateTime?
+
+  // Gemini API key (optional per-shop)
+  geminiApiKey   String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  products       Product[]
+  metafieldCache MetafieldDefinitionCache[]
 
   @@index([shop])
 }
@@ -35,6 +45,11 @@ model Product {
 
   // Metafields data stored as JSON
   metafields       Json?
+
+  // Variants and images tracking
+  variantsCount       Int      @default(1)
+  imagesCount         Int      @default(0)
+  hasMultipleVariants Boolean  @default(false)
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -58,4 +73,23 @@ model Template {
   updatedAt   DateTime @updatedAt
 
   @@index([slug])
+}
+
+// Cache metafield definitions from shop
+model MetafieldDefinitionCache {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  namespace   String
+  key         String
+  name        String
+  type        String   // single_line_text_field, number_integer, url, json, etc.
+  description String?
+  validations Json?    // Store validation rules as JSON
+
+  cachedAt    DateTime @default(now())
+
+  @@unique([shopId, namespace, key])
+  @@index([shopId])
 }

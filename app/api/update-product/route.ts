@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
       productId,
       shopId,
       title,
+      description,
       price,
       compareAtPrice,
       sku,
@@ -72,11 +73,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Update product basic info if provided
-    if (title) {
+    if (title || description !== undefined) {
       const productInput: any = {
         id: shopifyProductId,
-        title,
       };
+      if (title) productInput.title = title;
+      if (description !== undefined) productInput.descriptionHtml = description;
 
       const productResult: any = await shopifyGraphql(
         { shop: shop.shop, accessToken: shop.accessToken },
@@ -152,25 +154,30 @@ export async function POST(request: NextRequest) {
 
     // Update metafields if provided (only non-empty values)
     if (metafields && Object.keys(metafields).length > 0) {
-      // Keys that should use multi_line_text_field (longer texts)
-      const multiLineKeys = [
-        'hero_subtitle', 'section1_text', 'section1_bullets',
-        'section2_text', 'section2_bullets', 'section3_text',
-        'text_block_description', 'review1_text', 'review2_text', 'review3_text'
-      ];
+      // Fetch metafield definitions from shop to get correct types
+      const definitionsCache = await prisma.metafieldDefinitionCache.findMany({
+        where: { shopId, namespace: 'custom' },
+      });
+
+      // Build type map from definitions
+      const typeMap: Record<string, string> = {};
+      definitionsCache.forEach((def) => {
+        typeMap[def.key] = def.type;
+      });
+
+      console.log('[UPDATE] Type map from definitions:', typeMap);
 
       const metafieldInputs = Object.entries(metafields)
         .filter(([key, value]) => {
-          // Skip empty strings and null/undefined
           if (value === '' || value === null || value === undefined) return false;
           return true;
         })
         .map(([key, value]) => ({
           ownerId: shopifyProductId,
-          namespace: 'landing',
+          namespace: 'custom',
           key,
           value: typeof value === 'string' ? value : JSON.stringify(value),
-          type: multiLineKeys.includes(key) ? 'multi_line_text_field' : 'single_line_text_field',
+          type: typeMap[key] || 'single_line_text_field',
         }));
 
       console.log('[UPDATE] Metafields to save:', JSON.stringify(metafieldInputs, null, 2));

@@ -28,7 +28,8 @@ export function buildAuthUrl(shop: string, nonce: string): string {
     scope: scopes,
     redirect_uri: redirectUri,
     state: nonce,
-    grant_options: 'per-user',
+    // Offline tokens (default) don't expire - better for server-side apps
+    // grant_options: 'per-user' would require token refresh every 24h
   });
 
   return `https://${shop}/admin/oauth/authorize?${params.toString()}`;
