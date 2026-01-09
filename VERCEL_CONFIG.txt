@@ -1,0 +1,95 @@
+================================================================================
+                    CONFIGURAZIONE VERCEL - SHOPAUTO
+================================================================================
+
+Per deployare questa applicazione su Vercel, aggiungi le seguenti variabili
+d'ambiente nella sezione "Settings > Environment Variables" del tuo progetto.
+
+================================================================================
+                         VARIABILI D'AMBIENTE
+================================================================================
+
+1. DATABASE (NeonDB - PostgreSQL)
+---------------------------------
+Nome: DATABASE_URL
+Valore: [INSERISCI_LA_TUA_CONNECTION_STRING_NEONDB]
+Formato: postgresql://user:password@host/database?sslmode=require
+
+
+2. SHOPIFY APP CREDENTIALS
+--------------------------
+Nome: SHOPIFY_API_KEY
+Valore: [INSERISCI_LA_TUA_SHOPIFY_API_KEY]
+(Trovala nel Shopify Partner Dashboard > Apps > La tua App > API credentials)
+
+Nome: SHOPIFY_API_SECRET
+Valore: [INSERISCI_IL_TUO_SHOPIFY_API_SECRET]
+(Trovala nel Shopify Partner Dashboard > Apps > La tua App > API credentials)
+
+
+3. NEXT AUTH
+------------
+Nome: NEXTAUTH_URL
+Valore: https://[TUO-DOMINIO-VERCEL].vercel.app
+(Sostituisci con il dominio effettivo dopo il primo deploy)
+
+Nome: NEXTAUTH_SECRET
+Valore: [GENERA-UNA-STRINGA-SICURA]
+(Puoi generarla con: openssl rand -base64 32)
+
+
+4. GOOGLE GEMINI API (per generazione contenuti AI)
+---------------------------------------------------
+Nome: GEMINI_API_KEY
+Valore: [INSERISCI_LA_TUA_GEMINI_API_KEY]
+(Ottienila da: https://makersuite.google.com/app/apikey)
+
+
+================================================================================
+                         CONFIGURAZIONE BUILD
+================================================================================
+
+Framework Preset: Next.js
+Build Command: next build (default)
+Output Directory: .next (default)
+Install Command: npm install (default)
+Node.js Version: 18.x o superiore
+
+
+================================================================================
+                         DOMINI PERSONALIZZATI
+================================================================================
+
+Dopo il deploy puoi aggiungere un dominio personalizzato in:
+Settings > Domains
+
+Ricorda di aggiornare NEXTAUTH_URL con il dominio definitivo.
+
+
+================================================================================
+                              NOTE
+================================================================================
+
+- Tutte le variabili devono essere aggiunte per tutti gli ambienti
+  (Production, Preview, Development)
+
+- Per sicurezza, genera un nuovo NEXTAUTH_SECRET per la produzione
+
+- Se usi un dominio personalizzato, aggiorna NEXTAUTH_URL di conseguenza
+
+- Le API key Shopify sono legate all'app custom creata nel Partner Dashboard
+
+- IMPORTANTE: Non condividere mai le tue API key pubblicamente!
+
+
+================================================================================
+                    VALORI ATTUALI (DA NON PUSHARE)
+================================================================================
+
+Copia questi valori dal file .env locale:
+- DATABASE_URL: vedi .env
+- SHOPIFY_API_KEY: vedi .env
+- SHOPIFY_API_SECRET: vedi .env
+- GEMINI_API_KEY: vedi .env
+
+================================================================================

@@ -61,27 +61,63 @@ export async function POST(request: NextRequest) {
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemma-3-4b-it' });
 
     // Build prompt
     const fieldsToGenerate = fields || ['bullet1', 'bullet2', 'bullet3', 'angle1_title', 'angle1_desc', 'angle2_title', 'angle2_desc', 'angle3_title', 'angle3_desc'];
 
-    const prompt = `Analizza questa pagina prodotto e genera contenuti marketing in italiano.
+    const prompt = `Analyze this product page and generate marketing content in English.
 
 URL: ${url}
-${pageContent ? `\nContenuto pagina:\n${pageContent}` : ''}
+${pageContent ? `\nPage content:\n${pageContent}` : ''}
 
-Genera i seguenti campi per una landing page:
-- title: Nome prodotto accattivante
-- description: Descrizione breve del prodotto (2-3 frasi)
-${fieldsToGenerate.map((f: string) => `- ${f}: ${getFieldDescription(f)}`).join('\n')}
+RULES:
+- NEVER mention brand names, store names, or product names
+- Focus on product characteristics and features
+- Description: 1-2 sentences MAX
 
-Rispondi SOLO con un JSON valido nel formato:
+YOU MUST GENERATE ALL OF THE FOLLOWING FIELDS. DO NOT SKIP ANY FIELD:
+
+1. description: Very short product description (1-2 sentences)
+
+2. BULLETS (all 3 required):
+   - bullet_1: Format "<strong>Keyword</strong>: brief description"
+   - bullet_2: Format "<strong>Keyword</strong>: brief description"
+   - bullet_3: Format "<strong>Keyword</strong>: brief description"
+
+3. ANGLES (all 6 required):
+   - angle_1_title: DESIGN angle title (2-4 words)
+   - angle_1_text: DESIGN description (3-4 sentences with <strong> tags)
+   - angle_2_title: FIT & COMFORT angle title (2-4 words)
+   - angle_2_text: FIT & COMFORT description (3-4 sentences with <strong> tags)
+   - angle_3_title: MATERIALS angle title (2-4 words)
+   - angle_3_text: MATERIALS description (3-4 sentences with <strong> tags)
+
+4. LIFESTYLE (all 5 required):
+   - lifestyle_main_title: Emotional headline (3-5 words)
+   - lifestyle_left_title: Versatility title (2-4 words)
+   - lifestyle_left_text: When/where to wear (2-3 sentences)
+   - lifestyle_right_title: Comfort/lifestyle title (2-4 words)
+   - lifestyle_right_text: How it makes you feel (2-3 sentences)
+
+Reply with this EXACT JSON structure (all fields mandatory):
 {
-  "title": "...",
   "description": "...",
   "metafields": {
-    ${fieldsToGenerate.map((f: string) => `"${f}": "..."`).join(',\n    ')}
+    "bullet_1": "...",
+    "bullet_2": "...",
+    "bullet_3": "...",
+    "angle_1_title": "...",
+    "angle_1_text": "...",
+    "angle_2_title": "...",
+    "angle_2_text": "...",
+    "angle_3_title": "...",
+    "angle_3_text": "...",
+    "lifestyle_main_title": "...",
+    "lifestyle_left_title": "...",
+    "lifestyle_left_text": "...",
+    "lifestyle_right_title": "...",
+    "lifestyle_right_text": "..."
   }
 }`;
 
@@ -89,22 +125,152 @@ Rispondi SOLO con un JSON valido nel formato:
     const response = result.response;
     const text = response.text();
 
+    // ============================================
+    // DEBUG: Log raw AI response
+    // ============================================
+    console.log('========== AI RAW RESPONSE ==========');
+    console.log('Response length:', text.length);
+    console.log('Full response:\n', text);
+    console.log('======================================');
+
     // Parse JSON response
     let content;
     try {
       // Extract JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
+        console.log('========== EXTRACTED JSON ==========');
+        console.log('JSON length:', jsonMatch[0].length);
+        console.log('JSON content:\n', jsonMatch[0]);
+        console.log('=====================================');
         content = JSON.parse(jsonMatch[0]);
+        console.log('========== PARSED CONTENT ==========');
+        console.log('Parsed keys:', Object.keys(content));
+        console.log('Metafields keys:', content.metafields ? Object.keys(content.metafields) : 'NO METAFIELDS OBJECT');
+        console.log('=====================================');
       } else {
+        console.error('NO JSON FOUND IN RESPONSE');
         throw new Error('No JSON found in response');
       }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
+      console.error('Raw text that failed to parse:', text);
       return NextResponse.json(
         { success: false, error: 'Errore nel parsing della risposta AI' },
         { status: 500 }
       );
+    }
+
+    // Normalize JSON structure - move fields from root to metafields if needed
+    // (AI sometimes puts angle/lifestyle fields at root instead of inside metafields)
+    if (!content.metafields) {
+      content.metafields = {};
+    }
+
+    const fieldsToNormalize = [
+      'bullet_1', 'bullet_2', 'bullet_3',
+      'angle_1_title', 'angle_1_text',
+      'angle_2_title', 'angle_2_text',
+      'angle_3_title', 'angle_3_text',
+      'lifestyle_main_title',
+      'lifestyle_left_title', 'lifestyle_left_text',
+      'lifestyle_right_title', 'lifestyle_right_text'
+    ];
+
+    for (const field of fieldsToNormalize) {
+      if (content[field] && !content.metafields[field]) {
+        content.metafields[field] = content[field];
+        delete content[field];
+      }
+    }
+
+    // ============================================
+    // VALIDATION: Check all required fields
+    // ============================================
+    const requiredFields = {
+      // Bullets
+      bullet_1: 'Bullet 1 (primo punto chiave del prodotto)',
+      bullet_2: 'Bullet 2 (secondo punto chiave del prodotto)',
+      bullet_3: 'Bullet 3 (terzo punto chiave del prodotto)',
+      // Angle 1 - DESIGN
+      angle_1_title: 'Angle 1 Title (titolo sezione DESIGN)',
+      angle_1_text: 'Angle 1 Text (descrizione sezione DESIGN)',
+      // Angle 2 - FIT & COMFORT
+      angle_2_title: 'Angle 2 Title (titolo sezione FIT & COMFORT)',
+      angle_2_text: 'Angle 2 Text (descrizione sezione FIT & COMFORT)',
+      // Angle 3 - MATERIALS
+      angle_3_title: 'Angle 3 Title (titolo sezione MATERIALS)',
+      angle_3_text: 'Angle 3 Text (descrizione sezione MATERIALS)',
+      // Lifestyle
+      lifestyle_main_title: 'Lifestyle Main Title (titolo principale sezione lifestyle)',
+      lifestyle_left_title: 'Lifestyle Left Title (titolo colonna sinistra)',
+      lifestyle_left_text: 'Lifestyle Left Text (testo colonna sinistra)',
+      lifestyle_right_title: 'Lifestyle Right Title (titolo colonna destra)',
+      lifestyle_right_text: 'Lifestyle Right Text (testo colonna destra)',
+    };
+
+    const missingFields: string[] = [];
+    const emptyFields: string[] = [];
+
+    for (const [fieldKey, fieldDescription] of Object.entries(requiredFields)) {
+      const value = content.metafields[fieldKey];
+      if (value === undefined || value === null) {
+        missingFields.push(fieldDescription);
+      } else if (typeof value === 'string' && value.trim() === '') {
+        emptyFields.push(fieldDescription);
+      }
+    }
+
+    // Build detailed error message if fields are missing
+    if (missingFields.length > 0 || emptyFields.length > 0) {
+      const errorParts: string[] = [];
+
+      if (missingFields.length > 0) {
+        errorParts.push(
+          `CAMPI NON GENERATI (${missingFields.length}):\n` +
+          missingFields.map((f, i) => `  ${i + 1}. ${f}`).join('\n')
+        );
+      }
+
+      if (emptyFields.length > 0) {
+        errorParts.push(
+          `CAMPI VUOTI (${emptyFields.length}):\n` +
+          emptyFields.map((f, i) => `  ${i + 1}. ${f}`).join('\n')
+        );
+      }
+
+      const totalMissing = missingFields.length + emptyFields.length;
+      const errorMessage =
+        `⚠️ GENERAZIONE AI INCOMPLETA\n\n` +
+        `L'AI ha generato solo ${Object.keys(requiredFields).length - totalMissing}/${Object.keys(requiredFields).length} campi richiesti.\n\n` +
+        errorParts.join('\n\n') +
+        `\n\n💡 POSSIBILI CAUSE:\n` +
+        `  - La pagina sorgente non contiene abbastanza informazioni sul prodotto\n` +
+        `  - Il modello AI ha raggiunto il limite di token\n` +
+        `  - La risposta AI è stata troncata\n\n` +
+        `🔧 SOLUZIONI:\n` +
+        `  - Prova con un URL diverso con più dettagli\n` +
+        `  - Riprova la generazione (a volte funziona al secondo tentativo)\n` +
+        `  - Compila manualmente i campi mancanti`;
+
+      console.error('AI Generation incomplete:', {
+        missingFields,
+        emptyFields,
+        generatedFields: Object.keys(content.metafields),
+        rawResponse: text.substring(0, 500) + '...'
+      });
+
+      return NextResponse.json({
+        success: false,
+        error: errorMessage,
+        partialContent: content, // Include partial content so user can use what was generated
+        details: {
+          missingFields,
+          emptyFields,
+          totalRequired: Object.keys(requiredFields).length,
+          totalGenerated: Object.keys(requiredFields).length - totalMissing
+        }
+      }, { status: 422 }); // 422 Unprocessable Entity
     }
 
     return NextResponse.json({
@@ -122,16 +288,21 @@ Rispondi SOLO con un JSON valido nel formato:
 
 function getFieldDescription(field: string): string {
   const descriptions: Record<string, string> = {
-    bullet1: 'Primo punto chiave/beneficio del prodotto (breve, 5-10 parole)',
-    bullet2: 'Secondo punto chiave/beneficio del prodotto (breve, 5-10 parole)',
-    bullet3: 'Terzo punto chiave/beneficio del prodotto (breve, 5-10 parole)',
-    angle1_title: 'Titolo primo angolo di vendita (es: "Qualità Premium")',
-    angle1_desc: 'Descrizione primo angolo (2-3 frasi persuasive)',
-    angle2_title: 'Titolo secondo angolo di vendita',
-    angle2_desc: 'Descrizione secondo angolo (2-3 frasi persuasive)',
-    angle3_title: 'Titolo terzo angolo di vendita',
-    angle3_desc: 'Descrizione terzo angolo (2-3 frasi persuasive)',
+    bullet_1: 'Format: "<strong>Keyword</strong>: brief description" - First key benefit (bold keyword before colon)',
+    bullet_2: 'Format: "<strong>Keyword</strong>: brief description" - Second key benefit (bold keyword before colon)',
+    bullet_3: 'Format: "<strong>Keyword</strong>: brief description" - Third key benefit (bold keyword before colon)',
+    angle_1_title: 'DESIGN angle title - about aesthetics, style, visual appeal (short, 2-4 words)',
+    angle_1_text: 'DESIGN angle description (3-4 sentences). Use <strong> tags on 2-3 key words/phrases',
+    angle_2_title: 'FIT & COMFORT angle title - about fit, comfort, functionality (short, 2-4 words)',
+    angle_2_text: 'FIT & COMFORT angle description (3-4 sentences). Use <strong> tags on 2-3 key words/phrases',
+    angle_3_title: 'MATERIALS angle title - about fabric quality, materials, durability (short, 2-4 words)',
+    angle_3_text: 'MATERIALS angle description (3-4 sentences). Use <strong> tags on 2-3 key words/phrases',
+    lifestyle_main_title: 'Emotional aspirational headline for lifestyle section (short, 3-5 words)',
+    lifestyle_left_title: 'Versatility/occasions title - about when to wear it (short, 2-4 words)',
+    lifestyle_left_text: 'When and where to wear this product (2-3 sentences, emotional tone)',
+    lifestyle_right_title: 'Lifestyle/comfort title - about feeling good (short, 2-4 words)',
+    lifestyle_right_text: 'How this product makes you feel confident and comfortable (2-3 sentences, emotional tone)',
   };
 
-  return descriptions[field] || `Contenuto per ${field}`;
+  return descriptions[field] || `Content for ${field}`;
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { VariantOption, VariantCombination } from '@/types/shopify';
+import { useState, useEffect, useRef } from 'react';
+import { VariantOption, VariantCombination, ProductImage } from '@/types/shopify';
 import { generateVariantsWithDefaults, validateVariantOptions, formatVariantTitle } from '@/lib/variants';
 
 interface VariantBuilderProps {
@@ -11,7 +11,11 @@ interface VariantBuilderProps {
   onCombinationsChange: (combinations: VariantCombination[]) => void;
   defaultPrice?: string;
   defaultCompareAtPrice?: string;
+  availableImages?: ProductImage[];
 }
+
+// Map: optionValue -> { imageId, imageUrl }
+type ValueImageMap = Record<string, { imageId: string; imageUrl: string }>;
 
 export default function VariantBuilder({
   options,
@@ -20,12 +24,30 @@ export default function VariantBuilder({
   onCombinationsChange,
   defaultPrice = '0.00',
   defaultCompareAtPrice,
+  availableImages = [],
 }: VariantBuilderProps) {
   const [newOptionName, setNewOptionName] = useState('');
   const [newValueInputs, setNewValueInputs] = useState<Record<number, string>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkCompareAtPrice, setBulkCompareAtPrice] = useState('');
+
+  // Image assignment: which option to use for images
+  const [imageOptionIndex, setImageOptionIndex] = useState<number | null>(null);
+  const [valueImages, setValueImages] = useState<ValueImageMap>({});
+  const [openImageSelector, setOpenImageSelector] = useState<string | null>(null);
+  const imageSelectorRef = useRef<HTMLDivElement>(null);
+
+  // Close image selector when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (imageSelectorRef.current && !imageSelectorRef.current.contains(event.target as Node)) {
+        setOpenImageSelector(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Regenerate combinations when options change
   useEffect(() => {
@@ -64,8 +86,45 @@ export default function VariantBuilder({
       onCombinationsChange(mergedCombinations);
     } else {
       onCombinationsChange([]);
+      setImageOptionIndex(null);
+      setValueImages({});
     }
   }, [options]);
+
+  // Apply images to combinations when valueImages or imageOptionIndex changes
+  useEffect(() => {
+    if (combinations.length === 0 || imageOptionIndex === null) return;
+
+    const selectedOption = options[imageOptionIndex];
+    if (!selectedOption) return;
+
+    const updatedCombinations = combinations.map(combo => {
+      const optionValue = combo.options[selectedOption.name];
+      const imageData = valueImages[optionValue];
+
+      if (imageData?.imageUrl) {
+        return {
+          ...combo,
+          imageId: imageData.imageId || imageData.imageUrl, // Use URL as fallback ID
+          imageUrl: imageData.imageUrl,
+        };
+      }
+      return {
+        ...combo,
+        imageId: undefined,
+        imageUrl: undefined,
+      };
+    });
+
+    // Only update if changed
+    const hasChanges = updatedCombinations.some((combo, i) =>
+      combo.imageUrl !== combinations[i]?.imageUrl
+    );
+
+    if (hasChanges) {
+      onCombinationsChange(updatedCombinations);
+    }
+  }, [valueImages, imageOptionIndex]);
 
   const addOption = () => {
     if (!newOptionName.trim()) return;
@@ -86,6 +145,14 @@ export default function VariantBuilder({
   const removeOption = (index: number) => {
     const newOptions = options.filter((_, i) => i !== index);
     onOptionsChange(newOptions);
+
+    // Reset image option if removed
+    if (imageOptionIndex === index) {
+      setImageOptionIndex(null);
+      setValueImages({});
+    } else if (imageOptionIndex !== null && imageOptionIndex > index) {
+      setImageOptionIndex(imageOptionIndex - 1);
+    }
   };
 
   const addValueToOption = (optionIndex: number) => {
@@ -103,6 +170,15 @@ export default function VariantBuilder({
 
   const removeValueFromOption = (optionIndex: number, valueIndex: number) => {
     const newOptions = [...options];
+    const removedValue = newOptions[optionIndex].values[valueIndex];
+
+    // Remove associated image if this is the image option
+    if (imageOptionIndex === optionIndex && valueImages[removedValue]) {
+      const newValueImages = { ...valueImages };
+      delete newValueImages[removedValue];
+      setValueImages(newValueImages);
+    }
+
     newOptions[optionIndex].values.splice(valueIndex, 1);
     onOptionsChange(newOptions);
   };
@@ -136,6 +212,24 @@ export default function VariantBuilder({
     onCombinationsChange(newCombinations);
     setBulkCompareAtPrice('');
   };
+
+  const setImageForValue = (value: string, imageId: string, imageUrl: string) => {
+    if (imageId) {
+      setValueImages(prev => ({
+        ...prev,
+        [value]: { imageId, imageUrl }
+      }));
+    } else {
+      setValueImages(prev => {
+        const newMap = { ...prev };
+        delete newMap[value];
+        return newMap;
+      });
+    }
+    setOpenImageSelector(null);
+  };
+
+  const selectedImageOption = imageOptionIndex !== null ? options[imageOptionIndex] : null;
 
   return (
     <div className="space-y-6">
@@ -285,12 +379,141 @@ export default function VariantBuilder({
             </div>
           </div>
 
+          {/* Image Assignment Section */}
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h5 className="font-medium text-blue-800 mb-3">Assegna Immagini per Opzione</h5>
+
+            {/* Option Selector */}
+            <div className="mb-4">
+              <label className="block text-sm text-blue-700 mb-2">
+                Seleziona l'opzione per le immagini:
+              </label>
+              <select
+                value={imageOptionIndex ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setImageOptionIndex(val === '' ? null : parseInt(val));
+                  setValueImages({});
+                  setOpenImageSelector(null);
+                }}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="">Nessuna (non assegnare immagini)</option>
+                {options.map((opt, index) => (
+                  <option key={index} value={index}>
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Value Image Assignment */}
+            {selectedImageOption && selectedImageOption.values.length > 0 && (
+              <div>
+                <label className="block text-sm text-blue-700 mb-2">
+                  Assegna immagine a ogni valore di "{selectedImageOption.name}":
+                </label>
+                <div className="space-y-2">
+                  {selectedImageOption.values.map((value) => {
+                    const valueImage = valueImages[value];
+
+                    return (
+                      <div
+                        key={value}
+                        className="flex items-center gap-3 p-2 bg-white rounded border"
+                      >
+                        <span className="font-medium text-sm min-w-[80px]">{value}</span>
+
+                        <div className="relative" ref={openImageSelector === value ? imageSelectorRef : undefined}>
+                          <button
+                            type="button"
+                            onClick={() => setOpenImageSelector(openImageSelector === value ? null : value)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm ${
+                              valueImage
+                                ? 'bg-green-100 text-green-700 border border-green-300'
+                                : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                            }`}
+                          >
+                            {valueImage ? (
+                              <>
+                                <img src={valueImage.imageUrl} alt="" className="w-6 h-6 object-cover rounded" />
+                                <span>Cambia</span>
+                              </>
+                            ) : (
+                              <>📷 Scegli</>
+                            )}
+                          </button>
+
+                          {/* Image Dropdown */}
+                          {openImageSelector === value && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-3 min-w-[280px]">
+                              {availableImages.length > 0 ? (
+                                <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                                  {/* Remove image option */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setImageForValue(value, '', '')}
+                                    className={`w-14 h-14 border-2 rounded flex items-center justify-center ${
+                                      !valueImage ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                    title="Rimuovi immagine"
+                                  >
+                                    <span className="text-gray-400 text-lg">✕</span>
+                                  </button>
+
+                                  {availableImages.map((img, imgIndex) => {
+                                    // Use id if available, otherwise use url as identifier
+                                    const imgIdentifier = img.id || img.url || '';
+                                    const isSelected = valueImage?.imageId === imgIdentifier || valueImage?.imageUrl === img.url;
+
+                                    return (
+                                      <button
+                                        key={imgIdentifier || imgIndex}
+                                        type="button"
+                                        onClick={() => setImageForValue(value, imgIdentifier, img.url || '')}
+                                        className={`w-14 h-14 border-2 rounded overflow-hidden ${
+                                          isSelected ? 'border-blue-500' : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                      >
+                                        <img
+                                          src={img.url}
+                                          alt={`Img ${imgIndex + 1}`}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-500 p-2 text-center">
+                                  Carica prima delle immagini nella galleria prodotto
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Success indicator */}
+                        {valueImage && (
+                          <span className="text-green-600 text-sm flex items-center gap-1">
+                            ✓ Immagine selezionata
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Combinations Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-100">
                   <th className="px-3 py-2 text-left">Variante</th>
+                  <th className="px-3 py-2 text-left">Img</th>
                   <th className="px-3 py-2 text-left">Prezzo (€)</th>
                   <th className="px-3 py-2 text-left">Prezzo Confronto (€)</th>
                   <th className="px-3 py-2 text-left">SKU</th>
@@ -301,6 +524,17 @@ export default function VariantBuilder({
                   <tr key={index} className="border-b">
                     <td className="px-3 py-2 font-medium">
                       {formatVariantTitle(combo.options)}
+                    </td>
+                    <td className="px-3 py-2">
+                      {combo.imageUrl ? (
+                        <img
+                          src={combo.imageUrl}
+                          alt=""
+                          className="w-8 h-8 object-cover rounded"
+                        />
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <input

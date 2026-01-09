@@ -1,8 +1,100 @@
 import { GraphQLClient } from 'graphql-request';
+import { prisma } from './db';
 
 export interface ShopifyConfig {
   shop: string;
   accessToken: string;
+}
+
+// Token refresh buffer - refresh 5 minutes before expiry
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+
+/**
+ * Refresh access token using client credentials grant
+ */
+async function refreshAccessToken(
+  shop: string,
+  clientId: string,
+  clientSecret: string
+): Promise<{ accessToken: string; expiresAt: Date }> {
+  const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'client_credentials',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to refresh token: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const expiresAt = new Date(Date.now() + data.expires_in * 1000);
+
+  return {
+    accessToken: data.access_token,
+    expiresAt,
+  };
+}
+
+/**
+ * Get valid access token for shop, refreshing if necessary
+ */
+export async function getValidAccessToken(shopDomain: string): Promise<string> {
+  const shop = await prisma.shop.findUnique({
+    where: { shop: shopDomain },
+  });
+
+  if (!shop) {
+    throw new Error(`Shop not found: ${shopDomain}`);
+  }
+
+  // Check if token needs refresh
+  const needsRefresh =
+    !shop.tokenExpiresAt ||
+    shop.tokenExpiresAt.getTime() - Date.now() < TOKEN_REFRESH_BUFFER_MS;
+
+  if (needsRefresh && shop.clientId && shop.clientSecret) {
+    console.log(`[Token] Refreshing token for ${shopDomain}...`);
+
+    const { accessToken, expiresAt } = await refreshAccessToken(
+      shopDomain,
+      shop.clientId,
+      shop.clientSecret
+    );
+
+    // Update token in database
+    await prisma.shop.update({
+      where: { shop: shopDomain },
+      data: {
+        accessToken,
+        tokenExpiresAt: expiresAt,
+      },
+    });
+
+    console.log(`[Token] Token refreshed, expires at ${expiresAt.toISOString()}`);
+    return accessToken;
+  }
+
+  return shop.accessToken;
+}
+
+/**
+ * Create Shopify client with auto-refreshing token
+ */
+export async function createShopifyClientWithRefresh(shopDomain: string) {
+  const accessToken = await getValidAccessToken(shopDomain);
+  const endpoint = `https://${shopDomain}/admin/api/2024-01/graphql.json`;
+
+  return new GraphQLClient(endpoint, {
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+  });
 }
 
 export function createShopifyClient(config: ShopifyConfig) {
@@ -27,8 +119,68 @@ export async function shopifyGraphql<T = any>(
     const data = await client.request<T>(query, variables);
     return data;
   } catch (error: any) {
-    console.error('Shopify GraphQL Error:', error);
-    throw new Error(error.response?.errors?.[0]?.message || 'Shopify API error');
+    console.error('Shopify GraphQL Error:', JSON.stringify({
+      message: error.message,
+      response: error.response,
+      errors: error.response?.errors,
+    }, null, 2));
+    const errorMessage = error.response?.errors?.[0]?.message
+      || error.message
+      || 'Shopify API error';
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Execute GraphQL query with auto-refreshing token
+ */
+export async function shopifyGraphqlWithRefresh<T = any>(
+  shopDomain: string,
+  query: string,
+  variables?: Record<string, any>
+): Promise<T> {
+  const client = await createShopifyClientWithRefresh(shopDomain);
+
+  try {
+    const data = await client.request<T>(query, variables);
+    return data;
+  } catch (error: any) {
+    // If token error (401 or message includes 'access token'), try refreshing once more
+    const isAuthError = error.response?.status === 401
+      || error.response?.errors?.[0]?.message?.includes('access token')
+      || error.message?.includes('401');
+
+    if (isAuthError) {
+      console.log('[Token] Auth error detected (401), forcing token refresh...');
+      const shop = await prisma.shop.findUnique({ where: { shop: shopDomain } });
+
+      if (shop?.clientId && shop?.clientSecret) {
+        const { accessToken, expiresAt } = await refreshAccessToken(
+          shopDomain,
+          shop.clientId,
+          shop.clientSecret
+        );
+
+        await prisma.shop.update({
+          where: { shop: shopDomain },
+          data: { accessToken, tokenExpiresAt: expiresAt },
+        });
+
+        // Retry with new token
+        const newClient = await createShopifyClientWithRefresh(shopDomain);
+        return await newClient.request<T>(query, variables);
+      }
+    }
+
+    console.error('Shopify GraphQL Error:', JSON.stringify({
+      message: error.message,
+      response: error.response,
+      errors: error.response?.errors,
+    }, null, 2));
+    const errorMessage = error.response?.errors?.[0]?.message
+      || error.message
+      || 'Shopify API error';
+    throw new Error(errorMessage);
   }
 }
 
@@ -308,8 +460,53 @@ export const PRODUCTS_LIST_QUERY = `
 `;
 
 // ============================================
+// INVENTORY MUTATIONS
+// ============================================
+
+// Disable inventory tracking for a variant
+export const INVENTORY_ITEM_UPDATE_MUTATION = `
+  mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+    inventoryItemUpdate(id: $id, input: $input) {
+      inventoryItem {
+        id
+        tracked
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+// ============================================
 // VARIANT MUTATIONS
 // ============================================
+
+// Create product options (required before creating variants)
+export const PRODUCT_OPTIONS_CREATE_MUTATION = `
+  mutation productOptionsCreate($productId: ID!, $options: [OptionCreateInput!]!) {
+    productOptionsCreate(productId: $productId, options: $options) {
+      userErrors {
+        field
+        message
+        code
+      }
+      product {
+        id
+        options {
+          id
+          name
+          position
+          optionValues {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+`;
 
 // Create product with options (for variants)
 export const PRODUCT_CREATE_WITH_OPTIONS_MUTATION = `
@@ -579,6 +776,10 @@ export const PRODUCT_VARIANTS_QUERY = `
             selectedOptions {
               name
               value
+            }
+            inventoryItem {
+              id
+              tracked
             }
           }
         }

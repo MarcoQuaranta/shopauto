@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { shopifyGraphql, METAFIELDS_SET_MUTATION, PRODUCT_UPDATE_MUTATION } from '@/lib/shopify';
+import { shopifyGraphqlWithRefresh, METAFIELDS_SET_MUTATION, PRODUCT_UPDATE_MUTATION } from '@/lib/shopify';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       price,
       compareAtPrice,
       sku,
+      tags,
       metafields,
     } = body;
 
@@ -73,15 +74,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Update product basic info if provided
-    if (title || description !== undefined) {
+    if (title || description !== undefined || tags) {
       const productInput: any = {
         id: shopifyProductId,
       };
       if (title) productInput.title = title;
       if (description !== undefined) productInput.descriptionHtml = description;
+      if (tags && Array.isArray(tags)) productInput.tags = tags;
 
-      const productResult: any = await shopifyGraphql(
-        { shop: shop.shop, accessToken: shop.accessToken },
+      const productResult: any = await shopifyGraphqlWithRefresh(
+        shop.shop,
         PRODUCT_UPDATE_MUTATION,
         { input: productInput }
       );
@@ -111,8 +113,8 @@ export async function POST(request: NextRequest) {
         }
       `;
 
-      const productData: any = await shopifyGraphql(
-        { shop: shop.shop, accessToken: shop.accessToken },
+      const productData: any = await shopifyGraphqlWithRefresh(
+        shop.shop,
         getProductQuery,
         { id: shopifyProductId }
       );
@@ -153,20 +155,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update metafields if provided (only non-empty values)
+    // NON passiamo il tipo - Shopify lo inferisce dalla definizione esistente
     if (metafields && Object.keys(metafields).length > 0) {
-      // Fetch metafield definitions from shop to get correct types
-      const definitionsCache = await prisma.metafieldDefinitionCache.findMany({
-        where: { shopId, namespace: 'custom' },
-      });
-
-      // Build type map from definitions
-      const typeMap: Record<string, string> = {};
-      definitionsCache.forEach((def) => {
-        typeMap[def.key] = def.type;
-      });
-
-      console.log('[UPDATE] Type map from definitions:', typeMap);
-
       const metafieldInputs = Object.entries(metafields)
         .filter(([key, value]) => {
           if (value === '' || value === null || value === undefined) return false;
@@ -177,24 +167,28 @@ export async function POST(request: NextRequest) {
           namespace: 'custom',
           key,
           value: typeof value === 'string' ? value : JSON.stringify(value),
-          type: typeMap[key] || 'single_line_text_field',
+          // NON includere type - Shopify lo inferisce dalla definizione
         }));
 
       console.log('[UPDATE] Metafields to save:', JSON.stringify(metafieldInputs, null, 2));
 
       // Only send metafields if there are any after filtering
       if (metafieldInputs.length > 0) {
-        const metafieldResult: any = await shopifyGraphql(
-          { shop: shop.shop, accessToken: shop.accessToken },
+        const metafieldResult: any = await shopifyGraphqlWithRefresh(
+          shop.shop,
           METAFIELDS_SET_MUTATION,
           { metafields: metafieldInputs }
         );
 
+        console.log('[UPDATE] Metafield result:', JSON.stringify(metafieldResult, null, 2));
+
         if (metafieldResult.metafieldsSet.userErrors.length > 0) {
-          console.error('Metafield errors:', metafieldResult.metafieldsSet.userErrors);
+          console.error('[UPDATE] Metafield errors:', metafieldResult.metafieldsSet.userErrors);
+        } else {
+          console.log('[UPDATE] Metafields saved successfully:', metafieldResult.metafieldsSet.metafields?.length || 0);
         }
       } else {
-        console.log('No metafields to update (all values are empty)');
+        console.log('[UPDATE] No metafields to update (all values are empty)');
       }
     }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { shopifyGraphql, STAGED_UPLOADS_CREATE_MUTATION, FILE_CREATE_MUTATION } from '@/lib/shopify';
+import { shopifyGraphqlWithRefresh, STAGED_UPLOADS_CREATE_MUTATION, FILE_CREATE_MUTATION } from '@/lib/shopify';
 
 // Query to get file by ID and check if it's ready
 const FILE_GET_QUERY = `
@@ -31,7 +31,7 @@ async function waitForFileReady(
   for (let i = 0; i < maxAttempts; i++) {
     console.log(`[UPLOAD] Polling for file readiness, attempt ${i + 1}/${maxAttempts}`);
 
-    const result: any = await shopifyGraphql(config, FILE_GET_QUERY, { ids: [fileId] });
+    const result: any = await shopifyGraphqlWithRefresh(config.shop, FILE_GET_QUERY, { ids: [fileId] });
     const file = result.nodes?.[0];
 
     if (file?.image?.url) {
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
     console.log('[UPLOAD] Step 1: Creating staged upload for shop:', shop.shop);
 
     // Step 1: Create staged upload
-    const stagedUploadResult: any = await shopifyGraphql(
-      shopConfig,
+    const stagedUploadResult: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       STAGED_UPLOADS_CREATE_MUTATION,
       {
         input: [
@@ -139,8 +139,8 @@ export async function POST(request: NextRequest) {
     console.log('[UPLOAD] Step 3: Creating file record in Shopify');
 
     // Step 3: Create file record in Shopify
-    const fileCreateResult: any = await shopifyGraphql(
-      shopConfig,
+    const fileCreateResult: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       FILE_CREATE_MUTATION,
       {
         files: [
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     } else if (createdFile?.id) {
       // File not ready yet, poll for it
       console.log('[UPLOAD] File not ready, starting polling...');
-      imageUrl = await waitForFileReady(shopConfig, createdFile.id);
+      imageUrl = await waitForFileReady({ shop: shop.shop, accessToken: shop.accessToken }, createdFile.id);
     }
 
     // Fallback to resourceUrl if nothing else worked

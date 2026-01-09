@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
-  shopifyGraphql,
+  shopifyGraphqlWithRefresh,
   PRODUCT_CREATE_MEDIA_MUTATION,
   PRODUCT_DELETE_MEDIA_MUTATION,
   PRODUCT_REORDER_MEDIA_MUTATION,
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch media from Shopify
-    const response: any = await shopifyGraphql(
-      { shop: shop.shop, accessToken: shop.accessToken },
+    const response: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       PRODUCT_MEDIA_QUERY,
       { id: productId }
     );
@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
       const file = files[i];
       if (file && file.size > 0) {
         // Create staged upload
-        const stagedResponse: any = await shopifyGraphql(
-          { shop: shop.shop, accessToken: shop.accessToken },
+        const stagedResponse: any = await shopifyGraphqlWithRefresh(
+          shop.shop,
           STAGED_UPLOADS_CREATE_MUTATION,
           {
             input: [{
@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create product media
-    const response: any = await shopifyGraphql(
-      { shop: shop.shop, accessToken: shop.accessToken },
+    const response: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       PRODUCT_CREATE_MEDIA_MUTATION,
       {
         productId,
@@ -206,18 +206,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const images = response.productCreateMedia.media
-      .filter((m: any) => m.image)
-      .map((m: any) => ({
-        id: m.id,
-        url: m.image.url,
-        altText: m.image.altText,
-        status: m.status,
-      }));
+    // Don't filter - include all media even if still processing
+    // The id is what we need for variant association
+    const images = response.productCreateMedia.media.map((m: any) => ({
+      id: m.id,
+      url: m.image?.url || m.preview?.image?.url || '',
+      altText: m.image?.altText || '',
+      status: m.status,
+    }));
+
+    console.log('[PRODUCT-IMAGES] Uploaded', images.length, 'images:', images.map((i: any) => i.id));
 
     return NextResponse.json({
       success: true,
       images,
+      // Return count so frontend knows how many were submitted
+      totalSubmitted: mediaInputs.length,
     });
   } catch (error: any) {
     console.error('Error adding product images:', error);
@@ -253,8 +257,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Reorder media
-    const response: any = await shopifyGraphql(
-      { shop: shop.shop, accessToken: shop.accessToken },
+    const response: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       PRODUCT_REORDER_MEDIA_MUTATION,
       {
         id: productId,
@@ -311,8 +315,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete media
-    const response: any = await shopifyGraphql(
-      { shop: shop.shop, accessToken: shop.accessToken },
+    const response: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       PRODUCT_DELETE_MEDIA_MUTATION,
       {
         productId,

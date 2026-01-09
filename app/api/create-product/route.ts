@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { shopifyGraphql, PRODUCT_CREATE_MUTATION, METAFIELDS_SET_MUTATION, PUBLISH_PRODUCT_MUTATION, GET_PUBLICATIONS_QUERY } from '@/lib/shopify';
+import { shopifyGraphqlWithRefresh, PRODUCT_CREATE_MUTATION, METAFIELDS_SET_MUTATION, PUBLISH_PRODUCT_MUTATION, GET_PUBLICATIONS_QUERY } from '@/lib/shopify';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,9 +12,11 @@ export async function POST(request: NextRequest) {
       price,
       compareAtPrice,
       sku,
+      tags,
       templateSuffix = 'landing',
       metafields,
       images,
+      options, // Product options for variants (e.g. Size, Color)
     } = body;
 
     console.log('[CREATE] Received request body:', JSON.stringify(body, null, 2));
@@ -45,9 +47,14 @@ export async function POST(request: NextRequest) {
       templateSuffix,
     };
 
+    // Add tags if provided
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      productInput.tags = tags;
+    }
+
     // Create product in Shopify
-    const productResult: any = await shopifyGraphql(
-      { shop: shop.shop, accessToken: shop.accessToken },
+    const productResult: any = await shopifyGraphqlWithRefresh(
+      shop.shop,
       PRODUCT_CREATE_MUTATION,
       { input: productInput }
     );
@@ -62,48 +69,35 @@ export async function POST(request: NextRequest) {
     const createdProduct = productResult.productCreate.product;
     const productGid = createdProduct.id;
 
-    // Publish product to Online Store channel
+    // Publish product to ALL sales channels
     try {
       // Get all publications (sales channels)
-      const publicationsResult: any = await shopifyGraphql(
-        { shop: shop.shop, accessToken: shop.accessToken },
+      const publicationsResult: any = await shopifyGraphqlWithRefresh(
+        shop.shop,
         GET_PUBLICATIONS_QUERY
       );
 
       const publications = publicationsResult.publications?.edges || [];
+      const publishedChannels: string[] = [];
 
-      // Find Online Store publication
-      const onlineStorePublication = publications.find((pub: any) =>
-        pub.node.name === 'Online Store' || pub.node.name.toLowerCase().includes('online')
-      );
-
-      if (onlineStorePublication) {
-        await shopifyGraphql(
-          { shop: shop.shop, accessToken: shop.accessToken },
-          PUBLISH_PRODUCT_MUTATION,
-          {
-            id: productGid,
-            input: [{ publicationId: onlineStorePublication.node.id }]
-          }
-        );
-        console.log('Product published to Online Store');
-      } else {
-        // If no Online Store found, publish to all channels
-        for (const pub of publications) {
-          try {
-            await shopifyGraphql(
-              { shop: shop.shop, accessToken: shop.accessToken },
-              PUBLISH_PRODUCT_MUTATION,
-              {
-                id: productGid,
-                input: [{ publicationId: pub.node.id }]
-              }
-            );
-          } catch (e) {
-            console.log(`Could not publish to ${pub.node.name}`);
-          }
+      // Publish to ALL available channels
+      for (const pub of publications) {
+        try {
+          await shopifyGraphqlWithRefresh(
+            shop.shop,
+            PUBLISH_PRODUCT_MUTATION,
+            {
+              id: productGid,
+              input: [{ publicationId: pub.node.id }]
+            }
+          );
+          publishedChannels.push(pub.node.name);
+        } catch (e) {
+          console.log(`Could not publish to ${pub.node.name}`);
         }
       }
+
+      console.log(`Product published to ${publishedChannels.length} channels:`, publishedChannels.join(', '));
     } catch (publishError) {
       console.error('Error publishing product:', publishError);
       // Don't fail the request, product is still created
@@ -168,8 +162,8 @@ export async function POST(request: NextRequest) {
 
       // Only send metafields if there are any after filtering
       if (metafieldInputs.length > 0) {
-        const metafieldResult: any = await shopifyGraphql(
-          { shop: shop.shop, accessToken: shop.accessToken },
+        const metafieldResult: any = await shopifyGraphqlWithRefresh(
+          shop.shop,
           METAFIELDS_SET_MUTATION,
           { metafields: metafieldInputs }
         );

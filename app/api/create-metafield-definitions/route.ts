@@ -33,6 +33,9 @@ const METAFIELD_DEFINITIONS = [
   { namespace: 'custom', key: 'lifestyle_right_icon', name: 'Lifestyle Right Icon', type: 'file_reference', description: 'Icona destra lifestyle' },
   { namespace: 'custom', key: 'lifestyle_right_title', name: 'Lifestyle Right Title', type: 'single_line_text_field', description: 'Titolo destra lifestyle' },
   { namespace: 'custom', key: 'lifestyle_right_text', name: 'Lifestyle Right Text', type: 'multi_line_text_field', description: 'Testo destra lifestyle' },
+
+  // Size Guide
+  { namespace: 'custom', key: 'size_guide2', name: 'Size Guide', type: 'multi_line_text_field', description: 'HTML table for size guide' },
 ];
 
 export async function POST(request: NextRequest) {

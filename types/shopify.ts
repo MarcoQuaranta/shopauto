@@ -11,6 +11,8 @@ export interface VariantCombination {
   compareAtPrice?: string;
   sku?: string;
   inventoryQuantity?: number;
+  imageId?: string;  // Shopify media ID to associate with this variant
+  imageUrl?: string; // Image URL for display in the UI
 }
 
 // Product image types

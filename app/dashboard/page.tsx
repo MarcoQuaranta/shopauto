@@ -314,6 +314,8 @@ export default function Dashboard() {
                 onEdit={(product) => {
                   setEditingProduct(product);
                   setShowForm(true);
+                  // Scroll to top to show the form
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
             </div>

@@ -78,19 +78,19 @@ export default function ImageGallery({
       return;
     }
 
-    // Add pending images
-    const pendingImages: ProductImage[] = filesToUpload.map((file, index) => ({
-      url: URL.createObjectURL(file),
-      file,
-      position: images.length + index,
-      status: 'pending' as const,
-    }));
-
-    onImagesChange([...images, ...pendingImages]);
-
-    // If we have a productId, upload immediately
+    // If we have a productId, upload immediately to Shopify
     if (productId) {
+      // Add pending images first
+      const pendingImages: ProductImage[] = filesToUpload.map((file, index) => ({
+        url: URL.createObjectURL(file),
+        file,
+        position: images.length + index,
+        status: 'pending' as const,
+      }));
+
+      onImagesChange([...images, ...pendingImages]);
       setUploading(true);
+
       try {
         const formData = new FormData();
         formData.append('shopId', shopId);
@@ -126,6 +126,16 @@ export default function ImageGallery({
       } finally {
         setUploading(false);
       }
+    } else {
+      // No productId - add images as ready (will be uploaded when product is created)
+      const newImages: ProductImage[] = filesToUpload.map((file, index) => ({
+        url: URL.createObjectURL(file),
+        file,
+        position: images.length + index,
+        status: 'ready' as const,
+      }));
+
+      onImagesChange([...images, ...newImages]);
     }
   };
 
@@ -212,11 +222,12 @@ export default function ImageGallery({
     <div className="space-y-4">
       {/* Drop Zone */}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
           isDragging
             ? 'border-teal-500 bg-teal-50'
             : 'border-gray-300 hover:border-teal-400'
         }`}
+        onClick={() => fileInputRef.current?.click()}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
@@ -236,7 +247,10 @@ export default function ImageGallery({
           </p>
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
             className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
             disabled={uploading}
           >
